@@ -1,4 +1,4 @@
-prisma/sweetstats.db
+prisma/*.db
 node_modules
 build
 .env
