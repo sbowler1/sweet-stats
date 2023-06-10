@@ -9,21 +9,14 @@ import {
 import prisma from "../prisma";
 import canvasCreate from "./canvasCreate";
 
-const leaderboard = async (interaction: any) => {
+const leaderboard = async (
+    interaction: any,
+    guildPrefsChannel: { id: number; guildId: string; channelId: string }
+) => {
     // Start timer for performance
     let startCount = Date.now();
     let guildId = interaction.guild.id;
     let stats;
-    // Get the channel to post the leaderboard to
-    const guildPrefsChannel = await prisma.guildPrefs.findFirst({
-        where: {
-            guildId,
-        },
-    });
-
-    if (!guildPrefsChannel) {
-        return;
-    }
 
     const { channelId } = guildPrefsChannel;
 
@@ -51,9 +44,8 @@ const leaderboard = async (interaction: any) => {
     });
 
     if (guildPlayersFromDB.length === 0) {
-        interaction.reply({
+        leaderboardChannel.send({
             content: `No players found in the database for this server.`,
-            ephemeral: true,
         });
         return;
     }
