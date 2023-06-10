@@ -1,31 +1,47 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
 }
 
-model destinyPlayers {
-  membershipId   String         @id
-  membershipType Int
-  character      String
-  light          Int
-  guildPlayers   guildPlayers[]
+model destinyCharacter {
+    membershipId      String @unique
+    membershipType    Int
+    emblemPath        String
+    name              String
+    playerTitle       String
+    light             Int
+    artifactPower     Int
+    raceClass         String
+    seasonRank        Int
+    timePlayedHours   Int
+    timePlayedMinutes Int
+    kdaPVP            String
+    kdaPVE            String
+    lastPlayed        String
+    characterId       String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    guildPlayer guildPlayer[]
 }
 
-model guildPlayers {
-  id             Int            @id @default(autoincrement())
-  guildId        String
-  membershipType Int
-  mId            String
-  displayName    String
-  destinyPlayers destinyPlayers @relation(fields: [mId], references: [membershipId])
+model guildPlayer {
+    id             String @id @default(uuid())
+    guildId        String
+    membershipType Int
+    membershipId   String
+    displayName    String
+
+    destinyCharacter destinyCharacter @relation(fields: [membershipId], references: [membershipId])
 }
 
 model guildPrefs {
-  id        Int    @id @default(autoincrement())
-  guildId   String @unique
-  channelId String
+    id        Int    @id @default(autoincrement())
+    guildId   String @unique
+    channelId String
 }

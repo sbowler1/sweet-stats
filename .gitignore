@@ -1,6 +1,5 @@
+prisma/sweetstats.db
 node_modules
 build
 .env
 .vscode
-
-prisma

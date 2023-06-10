@@ -13,12 +13,14 @@
     "@discordjs/rest": "^1.1.0",
     "@prisma/client": "^4.15.0",
     "@types/node": "^18.7.14",
+    "canvas": "^2.11.2",
     "chalk": "^4.1.2",
-    "discord.js": "14.3.0",
+    "discord.js": "^14.11.0",
     "dotenv": "^16.0.2",
     "mongoose": "^6.5.4"
   },
   "devDependencies": {
+    "prettier-plugin-prisma": "^4.13.0",
     "prisma": "^4.15.0",
     "typescript": "^4.8.2"
   },
