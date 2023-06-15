@@ -115,6 +115,7 @@ const leaderboard = async (
                             kdaPVE: data.kdaPVE,
                             lastPlayed: data.lastPlayed,
                             characterId: data.characterId,
+                            raceClass: data.raceClass,
 
                             updatedAt: new Date(),
                         },
