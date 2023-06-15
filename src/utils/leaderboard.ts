@@ -11,7 +11,7 @@ import canvasCreate from "./canvasCreate";
 
 const leaderboard = async (
     interaction: any,
-    guildPrefsChannel: { id: number; guildId: string; channelId: string }
+    guildPrefsChannel: { guildId: string; channelId: string }
 ) => {
     // Start timer for performance
     let startCount = Date.now();
@@ -50,10 +50,7 @@ const leaderboard = async (
         return;
     }
     // Clear the channel of all messages
-    leaderboardChannel.bulkDelete(100, true);
-
-    // sleep for 1 second to allow the channel to be cleared
-    new Promise((resolve) => setTimeout(resolve, 1000));
+    await leaderboardChannel.bulkDelete(100, true);
 
     // Send a message to the server that the leaderboard is being generated requested by the user
     if (interaction !== undefined) {

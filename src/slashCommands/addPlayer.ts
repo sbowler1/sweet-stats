@@ -4,6 +4,7 @@ import {
     ButtonStyle,
     PermissionFlagsBits,
     SlashCommandBuilder,
+    Snowflake,
 } from "discord.js";
 import { SlashCommand } from "../types";
 import {
@@ -22,6 +23,12 @@ const AddPlayerCommand: SlashCommand = {
     command: new SlashCommandBuilder()
         .setName("add")
         .setDescription("Adds player to the database for the leaderboard.")
+        .addUserOption((option) => {
+            return option
+                .setName("user")
+                .setDescription("The user to add the player to.")
+                .setRequired(true);
+        })
         .addStringOption((option) => {
             return option
                 .setName("name")
@@ -40,13 +47,13 @@ const AddPlayerCommand: SlashCommand = {
     execute: async (interaction) => {
         const displayName: string = interaction.options.get("name")?.value + "";
         const code: string = interaction.options.get("code")?.value + "";
-
-        const cleanedDisplayName = displayName
-            .trim()
-            .replace(
-                /[\!\#\$\%\^\&\*\)\(\+\=\.\<\>\{\}\[\]\:\;\'\"\|\~\`\_\-]/g,
-                "\\$&"
-            );
+        const userId: Snowflake = interaction.options.get("user")?.value + "";
+        // const cleanedDisplayName = displayName
+        //     .trim()
+        //     .replace(
+        //         /[\!\#\$\%\^\&\*\)\(\+\=\.\<\>\{\}\[\]\:\;\'\"\|\~\`\_\-]/g,
+        //         "\\$&"
+        //     );
 
         if (!code.match(/[0-9]{4}/)) {
             console.log(code);
@@ -62,24 +69,40 @@ const AddPlayerCommand: SlashCommand = {
             ephemeral: true,
         });
 
-        const { membershipId, membershipType } = await searchDestinyPlayer(
-            cleanedDisplayName,
+        const destinyPlayerSearch = await searchDestinyPlayer(
+            displayName,
             code
         );
+
+        let membershipId: string;
+        let membershipType: number;
+        if (destinyPlayerSearch.error) {
+            await interaction.editReply({
+                content: `User (${displayName}#${code}) does not exist.`,
+            });
+            return;
+        } else {
+            membershipId = destinyPlayerSearch.membershipId;
+            membershipType = destinyPlayerSearch.membershipType;
+        }
+
         const currentSeason = await getCurrentSeasonPassDefinition();
         const record = await getRecordDefinition();
         const player = await getPlayerAccountAndCharacterInformation(
-            membershipType,
+            membershipType.toString(),
             membershipId
         );
-        const stats = await getReplyAccountStats(membershipType, membershipId);
+        const stats = await getReplyAccountStats(
+            membershipType.toString(),
+            membershipId
+        );
 
         if (
             player.profileProgression.data === undefined ||
             player.characterProgressions.data === undefined
         )
             return interaction.editReply({
-                content: `User (${cleanedDisplayName}#${code}) does not have public progression on their account.`,
+                content: `User (${displayName}#${code}) does not have public progression on their account.`,
             });
 
         const data = getHighestCharacterForDestinyPlayer(
@@ -87,7 +110,7 @@ const AddPlayerCommand: SlashCommand = {
             stats,
             currentSeason,
             record,
-            cleanedDisplayName,
+            displayName,
             code
         );
 
@@ -145,15 +168,19 @@ const AddPlayerCommand: SlashCommand = {
             time: 30000,
         });
         if (addReply.customId === "yes") {
-            const guildPlayerFromDB = await prisma.guildPlayer.findFirst({
+            const guildPlayersFromDB = await prisma.guildPlayer.findMany({
                 where: {
-                    membershipId,
+                    guildId: interaction.guildId!,
                 },
             });
 
+            const guildPlayerFromDB = guildPlayersFromDB.find(
+                (player) => player.memberId === userId
+            );
+
             if (guildPlayerFromDB) {
                 await addReply.reply({
-                    content: `Player ${cleanedDisplayName}#${code} is already in the database.`,
+                    content: `Player ${displayName}#${code} is already in the database.`,
                     ephemeral: true,
                 });
                 interaction.deleteReply();
@@ -161,7 +188,7 @@ const AddPlayerCommand: SlashCommand = {
             }
 
             const addingPlayerToDB = await addReply.reply({
-                content: `Adding player ${cleanedDisplayName}#${code} to the database.`,
+                content: `Adding player ${displayName}#${code} to the database.`,
                 ephemeral: true,
             });
 
@@ -174,14 +201,6 @@ const AddPlayerCommand: SlashCommand = {
             );
 
             if (!destinyPlayerFromDB) {
-                const guildPlayer = await prisma.guildPlayer.create({
-                    data: {
-                        guildId: interaction.guildId!,
-                        membershipType,
-                        membershipId,
-                        displayName: data.name,
-                    },
-                });
                 const {
                     emblemPath,
                     name,
@@ -197,23 +216,33 @@ const AddPlayerCommand: SlashCommand = {
                     lastPlayed,
                     characterId,
                 } = data;
-                await prisma.destinyCharacter.create({
+                let createdDestinyCharacter =
+                    await prisma.destinyCharacter.create({
+                        data: {
+                            membershipId,
+                            membershipType,
+                            emblemPath,
+                            name,
+                            playerTitle,
+                            light,
+                            artifactPower,
+                            raceClass,
+                            seasonRank,
+                            timePlayedHours,
+                            timePlayedMinutes,
+                            kdaPVP,
+                            kdaPVE,
+                            lastPlayed,
+                            characterId,
+                        },
+                    });
+
+                await prisma.guildPlayer.create({
                     data: {
-                        membershipId,
-                        membershipType,
-                        emblemPath,
-                        name,
-                        playerTitle,
-                        light,
-                        artifactPower,
-                        raceClass,
-                        seasonRank,
-                        timePlayedHours,
-                        timePlayedMinutes,
-                        kdaPVP,
-                        kdaPVE,
-                        lastPlayed,
-                        characterId,
+                        guildId: interaction.guildId!,
+                        displayName: data.name,
+                        memberId: userId,
+                        destinyCharacterId: membershipId,
                     },
                 });
             } else if (destinyPlayerFromDB) {
@@ -232,41 +261,43 @@ const AddPlayerCommand: SlashCommand = {
                     lastPlayed,
                     characterId,
                 } = data;
-                await prisma.destinyCharacter.update({
-                    where: {
-                        membershipId,
-                    },
-                    data: {
-                        membershipId,
-                        membershipType,
-                        emblemPath,
-                        name,
-                        playerTitle,
-                        light,
-                        artifactPower,
-                        raceClass,
-                        seasonRank,
-                        timePlayedHours,
-                        timePlayedMinutes,
-                        kdaPVP,
-                        kdaPVE,
-                        lastPlayed,
-                        characterId,
-                    },
-                });
+                let updatedDestinyCharacter =
+                    await prisma.destinyCharacter.update({
+                        where: {
+                            membershipId,
+                        },
+                        data: {
+                            membershipId,
+                            membershipType,
+                            emblemPath,
+                            name,
+                            playerTitle,
+                            light,
+                            artifactPower,
+                            raceClass,
+                            seasonRank,
+                            timePlayedHours,
+                            timePlayedMinutes,
+                            kdaPVP,
+                            kdaPVE,
+                            lastPlayed,
+                            characterId,
+                        },
+                    });
 
                 await prisma.guildPlayer.create({
                     data: {
                         guildId: interaction.guildId!,
-                        membershipType,
-                        membershipId,
                         displayName: data.name,
+                        memberId: userId,
+                        destinyCharacterId:
+                            updatedDestinyCharacter.membershipId,
                     },
                 });
             }
 
             await addingPlayerToDB.edit({
-                content: `Player ${cleanedDisplayName}#${code} has been added to the database.`,
+                content: `Player ${displayName}#${code} has been added to the database.`,
             });
             interaction.deleteReply();
             setTimeout(() => addReply.deleteReply(), 5000);

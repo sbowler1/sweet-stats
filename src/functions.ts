@@ -4,13 +4,11 @@ import {
     GuildMember,
     PermissionFlagsBits,
     PermissionResolvable,
-    PermissionsBitField,
     TextChannel,
 } from "discord.js";
 import GuildDB from "./schemas/Guild";
 import { GuildOption } from "./types";
 import mongoose from "mongoose";
-import { stat } from "fs";
 
 const _BUNGIE_KEY = process.env.BUNGIE_KEY;
 
@@ -78,7 +76,7 @@ export const sendTimedMessage = (
 export const getGuildOption = async (guild: Guild, option: GuildOption) => {
     if (mongoose.connection.readyState === 0)
         throw new Error("Database not connected.");
-    let foundGuild = await GuildDB.findOne({ guildID: guild.id });
+    let foundGuild: any = await GuildDB.findOne({ guildID: guild.id });
     if (!foundGuild) return null;
     return foundGuild.options[option];
 };
@@ -110,31 +108,18 @@ export const searchDestinyPlayer = async (
             body: JSON.stringify({ displayName, displayNameCode: code }),
         }
     )
-        .then((r) => r.json())
-        .then((p) => {
-            let crossSavePlayer = {};
-            if (p.Response.length == 1) return p.Response;
+        .then((response) => response.json())
+        .then((data) => {
+            console.log(data);
+            if (data.Response.length == 0)
+                return { error: "No players found." };
 
-            // // Check if cross-save override exists on membership
-            // if (!p.Response[0].crossSaveOverride) {
-            //     console.log("User does not have cross-save enabled");
-            //     return p.Response[0];
-            // }
-
-            for (let i in p.Response) {
-                if (
-                    p.Response[i].crossSaveOverride ==
-                    p.Response[i].membershipType
-                ) {
-                    crossSavePlayer = p.Response[i];
-                }
-            }
-
-            return crossSavePlayer;
+            return data.Response[0];
         });
 
-    if (response.length == 0) return null;
+    // if (response.length == 0) return null;
 
+    console.log(response);
     return response;
 };
 
