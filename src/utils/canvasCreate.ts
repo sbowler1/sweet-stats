@@ -58,15 +58,17 @@ async function canvasCreate(data: {
     ctx.strokeStyle = "black";
     ctx.textAlign = "left";
     ctx.lineWidth = 0.25;
-    ctx.fillText(name, 96, canvas.height * 0.3);
-    ctx.strokeText(name, 96, canvas.height * 0.3);
+    const canvasName = name.length > 18 ? name.substring(0, 18) + "..." : name;
+    ctx.fillText(canvasName, 96, canvas.height * 0.3);
+    ctx.strokeText(canvasName, 96, canvas.height * 0.3);
     //Adding Title to canvas
     ctx.font = "18px Roboto Bold Italic";
     ctx.fillStyle = "#9c6397";
     ctx.strokeStyle = "black";
     ctx.textAlign = "left";
-    ctx.fillText(playerTitle, 96, canvas.height * 0.52);
-    ctx.strokeText(playerTitle, 96, canvas.height * 0.52);
+    const canvasTitle = playerTitle == "None" ? "" : playerTitle;
+    ctx.fillText(canvasTitle, 96, canvas.height * 0.52);
+    ctx.strokeText(canvasTitle, 96, canvas.height * 0.52);
     //Adding Gender, Race and class to canvas
     ctx.font = "18px Roboto Bold";
     ctx.fillStyle = "#ffffff";
